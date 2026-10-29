@@ -12,20 +12,31 @@
         body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
     </style>
 </head>
-<body class="bg-[#F8FAFC] text-slate-900 min-h-screen flex antialiased">
+<body class="bg-[#F8FAFC] text-slate-900 min-h-screen flex antialiased overflow-x-hidden">
 
-    <!-- Sidebar Minimalista Claro (Estilo A) -->
-    <aside class="w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 min-h-screen">
+    <!-- Fondo oscuro móvil cuando se abre el menú -->
+    <div id="mobileBackdrop" onclick="toggleMobileMenu()"
+         class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-30 hidden lg:hidden transition-opacity"></div>
+
+    <!-- Sidebar Minimalista Claro (Fijo en PC, Deslizable en Celular) -->
+    <aside id="sidebarMenu"
+           class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200/80 flex flex-col justify-between shrink-0 min-h-screen transform -translate-x-full lg:translate-x-0 lg:static transition-transform duration-200 ease-in-out">
         <div>
             <!-- Brand Header -->
-            <div class="h-16 px-6 flex items-center gap-3 border-b border-slate-100">
-                <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
-                    TC
+            <div class="h-16 px-6 flex items-center justify-between border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
+                        TC
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900 text-sm tracking-tight leading-none">Turismo TUCHILE</div>
+                        <div class="text-[11px] text-slate-400 font-medium mt-0.5">Property Management</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="font-bold text-slate-900 text-sm tracking-tight leading-none">Turismo TUCHILE</div>
-                    <div class="text-[11px] text-slate-400 font-medium mt-0.5">Property Management</div>
-                </div>
+                <!-- Botón cerrar menú en celular -->
+                <button type="button" onclick="toggleMobileMenu()" class="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
             </div>
 
             <!-- Navigation Links -->
@@ -96,21 +107,28 @@
     </aside>
 
     <!-- Main Content Column -->
-    <div class="flex-1 flex flex-col min-w-0">
-        <!-- Top Bar -->
-        <header class="h-16 bg-white/80 backdrop-blur-xs border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-10">
-            <div>
-                <h1 class="text-base font-bold text-slate-900">{% block page_title %}Panel de Control{% endblock %}</h1>
-                <p class="text-xs text-slate-500">{% block page_subtitle %}{{ request.session.sucursal_nombre }}{% endblock %}</p>
+    <div class="flex-1 flex flex-col min-w-0 w-full">
+        <!-- Top Bar Responsivo -->
+        <header class="min-h-16 py-3 bg-white/80 backdrop-blur-xs border-b border-slate-200/80 px-4 sm:px-8 flex items-center justify-between gap-3 sticky top-0 z-20">
+            <div class="flex items-center gap-3 min-w-0">
+                <!-- Botón Hamburguesa (Solo visible en Celular/Tablet) -->
+                <button type="button" onclick="toggleMobileMenu()"
+                        class="lg:hidden p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <div class="min-w-0">
+                    <h1 class="text-sm sm:text-base font-bold text-slate-900 truncate">{% block page_title %}Panel de Control{% endblock %}</h1>
+                    <p class="text-[11px] sm:text-xs text-slate-500 truncate">{% block page_subtitle %}{{ request.session.sucursal_nombre }}{% endblock %}</p>
+                </div>
             </div>
-            <div class="flex items-center gap-3">
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                <span class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     Supabase Cloud Activo
                 </span>
                 {% block top_actions %}
                 <a href="{% url 'crear_reserva' %}"
-                   class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-xs transition">
+                   class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 sm:px-3.5 py-2 rounded-xl shadow-xs transition">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                     <span>Nueva Reserva</span>
                 </a>
@@ -118,12 +136,12 @@
             </div>
         </header>
 
-        <!-- Page Body -->
-        <main class="p-8 space-y-6 max-w-7xl w-full mx-auto">
+        <!-- Page Body Responsivo -->
+        <main class="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto">
             {% if messages %}
                 <div class="space-y-2">
                     {% for message in messages %}
-                        <div class="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium border
+                        <div class="flex items-center justify-between px-4 py-3 rounded-xl text-xs sm:text-sm font-medium border
                             {% if message.tags == 'error' %}bg-rose-50 text-rose-800 border-rose-200
                             {% elif message.tags == 'warning' %}bg-amber-50 text-amber-800 border-amber-200
                             {% else %}bg-emerald-50 text-emerald-800 border-emerald-200{% endif %}">
@@ -137,5 +155,13 @@
         </main>
     </div>
 
+    <script>
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebarMenu');
+            const backdrop = document.getElementById('mobileBackdrop');
+            sidebar.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
+        }
+    </script>
 </body>
 </html>
