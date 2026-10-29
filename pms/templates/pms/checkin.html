@@ -1,0 +1,116 @@
+{% extends 'pms/base.html' %}
+
+{% block title %}Check-in Reserva #{{ reserva.id_reserva }} · Turismo TUCHILE{% endblock %}
+{% block page_title %}Check-in de Huésped · Reserva #{{ reserva.id_reserva }}{% endblock %}
+{% block page_subtitle %}{{ reserva.id_unidad.codigo_numero }} &middot; {{ reserva.id_unidad.id_sucursal.nombre_sucursal }}{% endblock %}
+{% block top_actions %}
+<a href="{% url 'reservas_lista' %}"
+   class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl transition">
+    <span>Volver a Reservas</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<form method="POST" id="checkinForm" class="max-w-4xl space-y-6">
+    {% csrf_token %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Ficha del Pasajero -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+            <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">1. Verificación del Huésped Titular</h3>
+            <div class="space-y-2.5 text-xs">
+                <div class="flex justify-between"><span class="text-slate-400">Nombre Completo</span><span class="font-semibold text-slate-900">{{ reserva.id_pasajero_titular.nombre_completo }}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Documento</span><span class="font-semibold text-slate-800">{{ reserva.id_pasajero_titular.tipo_documento }} {{ reserva.id_pasajero_titular.num_documento }}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Procedencia</span><span class="text-slate-700">{{ reserva.id_pasajero_titular.procedencia_ciudad }}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Unidad Asignada</span><span class="font-semibold text-emerald-700">{{ reserva.id_unidad.codigo_numero }} ({{ reserva.cantidad_pasajeros }} pax)</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Fechas Estadía</span><span class="text-slate-700">{{ reserva.fecha_checkin|date:"d/m/Y" }} al {{ reserva.fecha_checkout|date:"d/m/Y" }} ({{ reserva.noches }} noches)</span></div>
+            </div>
+        </div>
+
+        <!-- Liquidación de Saldo -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+            <h3 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">2. Liquidación de Saldo en Recepción</h3>
+            <div class="space-y-2 text-xs">
+                <div class="flex justify-between"><span class="text-slate-400">Total Alojamiento</span><span class="font-semibold text-slate-800">${{ reserva.monto_alojamiento|floatformat:0 }}</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Abono Previo</span><span class="font-semibold text-emerald-600">-${{ reserva.monto_abono_pagado|floatformat:0 }}</span></div>
+                <div class="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-100">
+                    <span>Saldo a cobrar ahora</span>
+                    <span>${{ reserva.saldo_pendiente|floatformat:0 }}</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Medio de Pago</label>
+                    <select name="medio_pago" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800">
+                        <option value="TARJETA_POS">Tarjeta Crédito / Débito (POS)</option>
+                        <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                        <option value="EFECTIVO">Efectivo</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Folio / Voucher Operación</label>
+                    <input type="text" name="num_voucher" value="POS-{{ reserva.id_reserva }}99" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-800">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firma Digital -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">3. Firma Digital y Reglamento Interno (Ley N° 19.628)</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Requisito obligatorio antes de habilitar la entrega de llaves de la unidad</p>
+            </div>
+            <button type="button" onclick="clearSignature()" class="text-xs font-medium text-slate-500 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 cursor-pointer">
+                Limpiar firma
+            </button>
+        </div>
+
+        <label class="flex items-start gap-2.5 cursor-pointer">
+            <input type="checkbox" name="acepta_condiciones" checked required class="mt-0.5 rounded border-slate-300">
+            <span class="text-xs text-slate-600">El huésped titular declara conocer las normas de estadía, horario de salida (12:00 hrs) y asume responsabilidad sobre el equipamiento e inventario de la unidad asignada.</span>
+        </label>
+
+        <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-2">
+            <canvas id="signatureCanvas" width="700" height="140" class="w-full h-32 cursor-crosshair"></canvas>
+        </div>
+        <input type="hidden" name="firma_digital_base64" id="firmaBase64">
+    </div>
+
+    <div class="flex justify-end gap-3">
+        <a href="{% url 'reservas_lista' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+            Cancelar
+        </a>
+        <button type="submit" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer">
+            Confirmar Check-in y entregar llaves
+        </button>
+    </div>
+</form>
+
+<script>
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+    }
+    canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    window.addEventListener('mouseup', () => { drawing = false; });
+    function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    document.getElementById('checkinForm').addEventListener('submit', () => {
+        document.getElementById('firmaBase64').value = canvas.toDataURL();
+    });
+</script>
+{% endblock %}

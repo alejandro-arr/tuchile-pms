@@ -1,0 +1,112 @@
+{% extends 'pms/base.html' %}
+
+{% block title %}Unidades y Limpieza · Turismo TUCHILE{% endblock %}
+{% block page_title %}Estado de Unidades, Limpieza y Mantenimiento{% endblock %}
+{% block page_subtitle %}Sincronización operativa entre el personal de aseo y recepción{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <!-- Tarjetas de Unidades (2 columnas) -->
+    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {% for u in unidades %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 flex flex-col justify-between space-y-4">
+                <div>
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-sm">{{ u.codigo_numero }}</h3>
+                            <p class="text-xs text-slate-400 mt-0.5">{{ u.id_sucursal.nombre_sucursal }} &middot; {{ u.capacidad_max_pax }} huéspedes</p>
+                        </div>
+                        {% if u.estado_unidad == 'DISPONIBLE' %}
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Disponible</span>
+                        {% elif u.estado_unidad == 'SUCIO' %}
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">Pendiente Aseo</span>
+                        {% elif u.estado_unidad == 'EN_LIMPIEZA' %}
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/60">En Limpieza</span>
+                        {% elif u.estado_unidad == 'OCUPADA' %}
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">Ocupada</span>
+                        {% else %}
+                            <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">Mantención</span>
+                        {% endif %}
+                    </div>
+
+                    {% if u.estado_unidad == 'SUCIO' %}
+                        <form method="POST" class="mt-4">
+                            {% csrf_token %}
+                            <input type="hidden" name="id_unidad" value="{{ u.id_unidad }}">
+                            <button name="accion" value="iniciar_limpieza"
+                                    class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer">
+                                Iniciar proceso de limpieza
+                            </button>
+                        </form>
+                    {% elif u.estado_unidad == 'EN_LIMPIEZA' %}
+                        <div class="mt-3 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            <label class="flex items-center gap-2"><input type="checkbox" checked> Cambio de ropa de cama y toallas</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" checked> Sanitización de baño y cocina</label>
+                            <label class="flex items-center gap-2"><input type="checkbox" checked> Verificación de inventario y gas</label>
+                        </div>
+                        <form method="POST" class="mt-3">
+                            {% csrf_token %}
+                            <input type="hidden" name="id_unidad" value="{{ u.id_unidad }}">
+                            <button name="accion" value="marcar_disponible"
+                                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer">
+                                Habilitar como Disponible
+                            </button>
+                        </form>
+                    {% elif u.estado_unidad == 'MANTENIMIENTO' %}
+                        <form method="POST" class="mt-4">
+                            {% csrf_token %}
+                            <input type="hidden" name="id_unidad" value="{{ u.id_unidad }}">
+                            <button name="accion" value="marcar_disponible"
+                                    class="w-full bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold py-2 rounded-xl transition cursor-pointer">
+                                Liberar de mantención
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+
+                <!-- Reportar incidencia -->
+                <details class="pt-3 border-t border-slate-100 text-xs">
+                    <summary class="cursor-pointer text-slate-500 hover:text-slate-800 font-medium">Reportar desperfecto o faltante</summary>
+                    <form method="POST" class="mt-3 space-y-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="id_unidad" value="{{ u.id_unidad }}">
+                        <input type="hidden" name="accion" value="reportar_dano">
+                        <select name="tipo_incidencia" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+                            <option value="DANO_INVENTARIO">Daño de Inventario</option>
+                            <option value="FALTANTE_MENAJE">Faltante de Menaje</option>
+                            <option value="FALLA_TECNICA">Falla Técnica (Bloquear unidad)</option>
+                        </select>
+                        <input type="text" name="descripcion_problema" placeholder="Detalle del problema detectado..." required
+                               class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs">
+                        <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 rounded-xl transition cursor-pointer">
+                            Registrar incidencia
+                        </button>
+                    </form>
+                </details>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Bitácora de Incidencias -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">Bitácora de Incidencias</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Últimos reportes de inventario o mantención</p>
+        </div>
+        <div class="divide-y divide-slate-100 text-xs">
+            {% for inc in incidencias %}
+                <div class="py-3 space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-slate-800">{{ inc.id_unidad.codigo_numero }}</span>
+                        <span class="text-[11px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">{{ inc.get_tipo_incidencia_display }}</span>
+                    </div>
+                    <p class="text-slate-600">{{ inc.descripcion_problema }}</p>
+                    <div class="text-[11px] text-slate-400">{{ inc.fecha_reporte|date:"d M Y H:i" }}</div>
+                </div>
+            {% empty %}
+                <div class="py-6 text-center text-slate-400">No hay incidencias registradas.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

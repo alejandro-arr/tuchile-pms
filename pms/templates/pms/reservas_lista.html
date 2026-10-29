@@ -1,0 +1,122 @@
+{% extends 'pms/base.html' %}
+
+{% block title %}Reservas y Check-in · Turismo TUCHILE{% endblock %}
+{% block page_title %}Gestión de Reservas, Check-in y Check-out{% endblock %}
+{% block page_subtitle %}Control operativo de ingresos, salidas y emisión de comprobantes{% endblock %}
+
+{% block content %}
+<!-- Buscador y Filtros -->
+<div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+    <form method="GET" class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+        <input type="text" name="q" value="{{ q }}" placeholder="Buscar por pasajero, RUT o unidad..."
+               class="w-full sm:w-72 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600">
+
+        <select name="estado" class="rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-600">
+            <option value="">Todos los estados</option>
+            <option value="CONFIRMADA" {% if estado_sel == 'CONFIRMADA' %}selected{% endif %}>Confirmada (Pendiente Check-in)</option>
+            <option value="CHECKIN_ACTIVO" {% if estado_sel == 'CHECKIN_ACTIVO' %}selected{% endif %}>En estadía (Check-in Activo)</option>
+            <option value="FINALIZADA" {% if estado_sel == 'FINALIZADA' %}selected{% endif %}>Finalizada (Check-out)</option>
+            <option value="ANULADA" {% if estado_sel == 'ANULADA' %}selected{% endif %}>Anulada</option>
+        </select>
+
+        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer">
+            Buscar
+        </button>
+        {% if q or estado_sel %}
+            <a href="{% url 'reservas_lista' %}" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2">Ver todas</a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Tabla Limpia de Reservas -->
+<div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <th class="py-3.5 px-5">Folio</th>
+                    <th class="py-3.5 px-4">Huésped Titular</th>
+                    <th class="py-3.5 px-4">Unidad / Sede</th>
+                    <th class="py-3.5 px-4">Fechas Estadía</th>
+                    <th class="py-3.5 px-4 text-right">Total / Saldo</th>
+                    <th class="py-3.5 px-4 text-center">Estado</th>
+                    <th class="py-3.5 px-5 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/60 text-sm">
+                {% for r in reservas %}
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="py-4 px-5 font-bold text-slate-900">#{{ r.id_reserva }}</td>
+                        <td class="py-4 px-4">
+                            <div class="font-semibold text-slate-900">{{ r.id_pasajero_titular.nombre_completo }}</div>
+                            <div class="text-xs text-slate-400 mt-0.5">{{ r.id_pasajero_titular.num_documento }} &middot; {{ r.id_pasajero_titular.procedencia_ciudad }}</div>
+                        </td>
+                        <td class="py-4 px-4">
+                            <div class="font-medium text-slate-800">{{ r.id_unidad.codigo_numero }}</div>
+                            <div class="text-xs text-slate-400">{{ r.id_unidad.id_sucursal.nombre_sucursal }} ({{ r.cantidad_pasajeros }} pax)</div>
+                        </td>
+                        <td class="py-4 px-4 text-xs text-slate-600">
+                            <div class="font-medium text-slate-800">{{ r.fecha_checkin|date:"d M Y" }} &rarr; {{ r.fecha_checkout|date:"d M Y" }}</div>
+                            <div class="text-slate-400">{{ r.noches }} noche(s)</div>
+                        </td>
+                        <td class="py-4 px-4 text-right">
+                            <div class="font-bold text-slate-900">${{ r.monto_total_final|floatformat:0 }}</div>
+                            {% if r.saldo_pendiente > 0 %}
+                                <div class="text-xs font-medium text-amber-600">Pendiente: ${{ r.saldo_pendiente|floatformat:0 }}</div>
+                            {% else %}
+                                <div class="text-xs font-medium text-emerald-600">Pagado 100%</div>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-center">
+                            {% if r.estado_reserva == 'CHECKIN_ACTIVO' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/60">
+                                    En estadía
+                                </span>
+                            {% elif r.estado_reserva == 'FINALIZADA' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                                    Finalizada
+                                </span>
+                            {% elif r.estado_reserva == 'ANULADA' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200/60">
+                                    Anulada
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                    Confirmada
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-5 text-right">
+                            <div class="inline-flex items-center justify-end gap-2">
+                                {% if r.estado_reserva == 'CONFIRMADA' or r.estado_reserva == 'PENDIENTE' %}
+                                    <a href="{% url 'checkin_view' r.id_reserva %}"
+                                       class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition">
+                                        Realizar Check-in
+                                    </a>
+                                    <a href="{% url 'anular_reserva' r.id_reserva %}"
+                                       class="text-rose-600 hover:bg-rose-50 border border-rose-200/70 text-xs font-medium px-2.5 py-1.5 rounded-xl transition">
+                                        Anular
+                                    </a>
+                                {% elif r.estado_reserva == 'CHECKIN_ACTIVO' %}
+                                    <a href="{% url 'checkout_view' r.id_reserva %}"
+                                       class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition">
+                                        Realizar Check-out
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'comprobante_pago' r.id_reserva %}" target="_blank"
+                                   class="text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-xl transition">
+                                    Comprobante
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="py-10 text-center text-sm text-slate-400">No se encontraron reservas con los criterios seleccionados.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

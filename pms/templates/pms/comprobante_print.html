@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprobante de Reserva #{{ reserva.id_reserva }} · Turismo TUCHILE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-900 min-h-screen py-10 px-4 antialiased">
+
+    <div class="max-w-2xl mx-auto">
+        <!-- Barra superior de acciones (oculta al imprimir) -->
+        <div class="flex items-center justify-between mb-6 print:hidden">
+            <a href="{% url 'reservas_lista' %}"
+               class="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200/80 px-3.5 py-2 rounded-xl shadow-2xs transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                <span>Volver a Reservas</span>
+            </a>
+
+            <button onclick="window.print()"
+                    class="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-xs transition cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                <span>Imprimir / Guardar PDF</span>
+            </button>
+        </div>
+
+        <!-- Documento Comprobante (Estilo A) -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-8 sm:p-10 space-y-8">
+            <!-- Encabezado Marca y Folio -->
+            <div class="flex flex-wrap justify-between items-start gap-4 pb-6 border-b border-slate-100">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white font-extrabold text-base flex items-center justify-center shadow-2xs">
+                        TC
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold tracking-tight text-slate-900">Turismo TUCHILE</h1>
+                        <p class="text-xs text-slate-400">{{ reserva.id_unidad.id_sucursal.nombre_sucursal }} &middot; {{ reserva.id_unidad.id_sucursal.direccion }}</p>
+                        <p class="text-xs text-slate-400">Tel: {{ reserva.id_unidad.id_sucursal.telefono_sede }}</p>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                        Comprobante de Reserva
+                    </span>
+                    <div class="text-xl font-extrabold text-slate-900 mt-1.5">Folio #00{{ reserva.id_reserva }}</div>
+                    <div class="text-xs text-slate-400 mt-0.5">{{ reserva.get_estado_reserva_display }}</div>
+                </div>
+            </div>
+
+            <!-- Bloques Huésped y Alojamiento -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50/70 rounded-2xl p-5 border border-slate-200/60 text-xs">
+                <div class="space-y-1.5">
+                    <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Huésped Titular</div>
+                    <div class="text-sm font-bold text-slate-900">{{ reserva.id_pasajero_titular.nombre_completo }}</div>
+                    <div class="text-slate-600">{{ reserva.id_pasajero_titular.tipo_documento }}: {{ reserva.id_pasajero_titular.num_documento }}</div>
+                    <div class="text-slate-500">Procedencia: {{ reserva.id_pasajero_titular.procedencia_ciudad }}</div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Detalle de Estadía</div>
+                    <div class="text-sm font-bold text-slate-900">{{ reserva.id_unidad.codigo_numero }} <span class="font-medium text-slate-500">({{ reserva.cantidad_pasajeros }} pax)</span></div>
+                    <div class="text-slate-600">Ingreso: <span class="font-medium text-slate-800">{{ reserva.fecha_checkin|date:"d/m/Y" }}</span> (15:00 hrs)</div>
+                    <div class="text-slate-600">Salida: <span class="font-medium text-slate-800">{{ reserva.fecha_checkout|date:"d/m/Y" }}</span> ({{ reserva.noches }} noches)</div>
+                </div>
+            </div>
+
+            <!-- Tabla de Pagos Registrados -->
+            <div class="space-y-3">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Movimientos y Pagos Registrados</h2>
+                <div class="rounded-xl border border-slate-200/80 overflow-hidden">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                <th class="py-3 px-4">Fecha</th>
+                                <th class="py-3 px-4">Concepto</th>
+                                <th class="py-3 px-4">Medio de Pago</th>
+                                <th class="py-3 px-4">Referencia</th>
+                                <th class="py-3 px-4 text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200/60">
+                            {% for p in pagos %}
+                                <tr>
+                                    <td class="py-3 px-4 text-slate-500">{{ p.fecha_hora_pago|date:"d/m/Y H:i" }}</td>
+                                    <td class="py-3 px-4 font-semibold text-slate-800">{{ p.get_tipo_movimiento_display }}</td>
+                                    <td class="py-3 px-4 text-slate-600">{{ p.get_medio_pago_display }}</td>
+                                    <td class="py-3 px-4 font-mono text-slate-500">{{ p.num_comprobante_voucher }}</td>
+                                    <td class="py-3 px-4 text-right font-bold text-slate-900">${{ p.monto|floatformat:0 }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="py-6 text-center text-slate-400">No se registran abonos asociados a esta reserva.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Resumen Totales y Firma -->
+            <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
+                <div>
+                    {% if reserva.firma_digital_base64 %}
+                        <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Firma Digital de Conformidad</div>
+                        <img src="{{ reserva.firma_digital_base64 }}" alt="Firma del Huésped" class="h-16 rounded-xl border border-slate-200 bg-slate-50/50 p-1.5">
+                    {% else %}
+                        <div class="inline-flex items-center gap-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-200/60 px-3 py-1.5 rounded-lg">
+                            <span>Firma pendiente de recepción en Check-in</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="w-full sm:w-64 space-y-2 text-xs">
+                    <div class="flex justify-between text-slate-500">
+                        <span>Alojamiento base</span>
+                        <span class="font-medium text-slate-800">${{ reserva.monto_alojamiento|floatformat:0 }}</span>
+                    </div>
+                    <div class="flex justify-between text-slate-500">
+                        <span>Cargos adicionales</span>
+                        <span class="font-medium text-slate-800">${{ reserva.monto_consumos_multas|floatformat:0 }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm font-bold text-slate-900 pt-2 border-t border-slate-100">
+                        <span>Total Estadía</span>
+                        <span>${{ reserva.monto_total_final|floatformat:0 }}</span>
+                    </div>
+                    <div class="flex justify-between text-emerald-600 font-semibold">
+                        <span>Total Abonado</span>
+                        <span>${{ reserva.monto_abono_pagado|floatformat:0 }}</span>
+                    </div>
+                    <div class="flex justify-between text-amber-600 font-semibold">
+                        <span>Saldo Pendiente</span>
+                        <span>${{ reserva.saldo_pendiente|floatformat:0 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

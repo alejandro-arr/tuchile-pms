@@ -1,0 +1,138 @@
+{% extends 'pms/base.html' %}
+
+{% block title %}Nueva Reserva · Turismo TUCHILE{% endblock %}
+{% block page_title %}Registrar Nueva Reserva{% endblock %}
+{% block page_subtitle %}Validación automática de disponibilidad y cálculo de tarifa por temporada{% endblock %}
+{% block top_actions %}
+<a href="{% url 'reservas_lista' %}"
+   class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl transition">
+    <span>Ver listado de reservas</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <!-- Formulario Principal (2 columnas) -->
+    <form method="POST" action="{% url 'crear_reserva' %}" class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-6">
+        {% csrf_token %}
+
+        <div>
+            <h2 class="text-sm font-bold text-slate-900">1. Información del Huésped Titular</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Datos exigidos para el registro oficial y contacto de la reserva</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">RUT o Pasaporte *</label>
+                    <input type="text" name="num_documento" placeholder="16.234.567-8" required
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nombre Completo *</label>
+                    <input type="text" name="nombre_completo" placeholder="Carlos Soto Vega" required
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Teléfono Móvil *</label>
+                    <input type="text" name="telefono" placeholder="+56 9 9876 5432" required
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Correo Electrónico</label>
+                    <input type="email" name="correo" placeholder="cliente@correo.cl"
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Ciudad / Región de Procedencia *</label>
+                    <input type="text" name="procedencia" value="Santiago" required
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-emerald-600">
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-6 border-t border-slate-100">
+            <h2 class="text-sm font-bold text-slate-900">2. Unidad y Fechas de Estadía</h2>
+            <p class="text-xs text-slate-400 mt-0.5">El sistema verificará en tiempo real que no exista cruce de fechas (Anti-Overbooking)</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Unidad de Alojamiento *</label>
+                    <select name="id_unidad" required
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-emerald-600">
+                        {% for u in unidades_todas %}
+                            <option value="{{ u.id_unidad }}">{{ u.codigo_numero }} · {{ u.id_sucursal.nombre_sucursal }} (Máx {{ u.capacidad_max_pax }} pax)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">N° de Huéspedes *</label>
+                    <input type="number" name="cantidad_pasajeros" value="2" min="1" max="10" required
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-emerald-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Fecha de Check-in *</label>
+                    <input type="date" name="fecha_checkin" value="{{ fecha_hoy }}" required
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-emerald-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Fecha de Check-out *</label>
+                    <input type="date" name="fecha_checkout" value="{{ fecha_manana }}" required
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-emerald-600">
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-6 border-t border-slate-100">
+            <h2 class="text-sm font-bold text-slate-900">3. Garantía y Seña Inicial</h2>
+            <p class="text-xs text-slate-400 mt-0.5">El abono inicial se registrará automáticamente en la Caja Diaria activa</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Abono Recibido (CLP)</label>
+                    <input type="number" name="monto_abono" value="30000" min="0"
+                           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-emerald-600">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Medio de Pago</label>
+                    <select name="medio_pago"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-emerald-600">
+                        <option value="TRANSFERENCIA">Transferencia Bancaria</option>
+                        <option value="TARJETA_POS">Tarjeta Crédito / Débito (POS)</option>
+                        <option value="EFECTIVO">Efectivo en Recepción</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="pt-4 flex items-center justify-end gap-3">
+            <a href="{% url 'dashboard_gantt' %}" class="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition">
+                Cancelar
+            </a>
+            <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-5 py-2.5 rounded-xl shadow-xs transition cursor-pointer">
+                Confirmar y bloquear unidad
+            </button>
+        </div>
+    </form>
+
+    <!-- Panel Lateral de Tarifas Vigentes -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-4">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">Tarifario Vigente por Temporada</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Valores base aplicados automáticamente por noche</p>
+        </div>
+        <div class="divide-y divide-slate-100 text-xs">
+            {% for t in tarifas %}
+                <div class="py-3 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-semibold text-slate-800">{{ t.id_tipo_unidad.nombre_tipo }}</div>
+                        <div class="text-slate-400">{{ t.id_zona.nombre_zona }}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-bold text-slate-900">${{ t.precio_noche_clp|floatformat:0 }}</div>
+                        <div class="text-[11px] text-emerald-600 font-medium">por noche</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

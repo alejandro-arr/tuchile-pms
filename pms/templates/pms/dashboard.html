@@ -1,0 +1,167 @@
+{% extends 'pms/base.html' %}
+
+{% block title %}Calendario de Ocupación · Turismo TUCHILE{% endblock %}
+{% block page_title %}Calendario de Ocupación (Matriz Gantt){% endblock %}
+{% block page_subtitle %}Disponibilidad en tiempo real sincronizada por zona geográfica y tipología{% endblock %}
+
+{% block content %}
+<!-- KPIs Minimalistas -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500">Total Unidades</span>
+            <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            </span>
+        </div>
+        <div class="text-2xl font-bold text-slate-900 mt-2">{{ kpi_total }}</div>
+        <div class="text-xs text-slate-400 mt-1">Cabañas y habitaciones</div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500">Disponibles Hoy</span>
+            <span class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+        </div>
+        <div class="text-2xl font-bold text-emerald-600 mt-2">{{ kpi_disponibles }}</div>
+        <div class="text-xs text-slate-400 mt-1">Listas para entrega</div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500">Unidades Ocupadas</span>
+            <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </span>
+        </div>
+        <div class="text-2xl font-bold text-slate-900 mt-2">{{ kpi_ocupadas }}</div>
+        <div class="text-xs text-slate-400 mt-1">Con estadía en curso</div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+        <div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-slate-500">Aseo / Mantención</span>
+            <span class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </span>
+        </div>
+        <div class="text-2xl font-bold text-amber-600 mt-2">{{ kpi_aseo }}</div>
+        <div class="text-xs text-slate-400 mt-1">Bloqueadas temporalmente</div>
+    </div>
+</div>
+
+<!-- Barra de Filtros -->
+<div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+    <form method="GET" class="flex flex-wrap items-center gap-3 text-sm w-full sm:w-auto">
+        <select name="zona" class="rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-600">
+            <option value="">Todas las Zonas Geográficas</option>
+            {% for z in zonas %}
+                <option value="{{ z.id_zona }}" {% if zona_sel == z.id_zona|stringformat:"s" %}selected{% endif %}>{{ z.nombre_zona }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="tipo" class="rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-600">
+            <option value="">Todas las Tipologías</option>
+            {% for t in tipos %}
+                <option value="{{ t.id_tipo_unidad }}" {% if tipo_sel == t.id_tipo_unidad|stringformat:"s" %}selected{% endif %}>{{ t.nombre_tipo }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="date" name="fecha" value="{{ fecha_base }}"
+               class="rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2 text-xs font-medium text-slate-700 focus:outline-none focus:border-emerald-600">
+
+        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-4 py-2 rounded-xl transition cursor-pointer">
+            Aplicar filtro
+        </button>
+        {% if zona_sel or tipo_sel %}
+            <a href="{% url 'dashboard_gantt' %}" class="text-xs text-slate-500 hover:text-slate-800 font-medium px-2">Limpiar</a>
+        {% endif %}
+    </form>
+
+    <div class="flex items-center gap-4 text-xs text-slate-500">
+        <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Libre</span>
+        <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-slate-900"></span> Reservada / Ocupada</span>
+        <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-400"></span> Mantención</span>
+    </div>
+</div>
+
+<!-- Matriz Gantt Minimalista -->
+<div class="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <th class="py-3.5 px-5 min-w-[230px]">Unidad de Alojamiento</th>
+                    <th class="py-3.5 px-4 text-center min-w-[130px]">Estado Operativo</th>
+                    {% for d in dias %}
+                        <th class="py-3.5 px-3 text-center min-w-[125px] border-l border-slate-100">{{ d|date:"d M" }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/60 text-sm">
+                {% for fila in matriz %}
+                    <tr class="hover:bg-slate-50/50 transition">
+                        <td class="py-4 px-5">
+                            <div class="font-semibold text-slate-900">{{ fila.unidad.codigo_numero }}</div>
+                            <div class="text-xs text-slate-400 mt-0.5">{{ fila.unidad.id_sucursal.nombre_sucursal }} &middot; Máx {{ fila.unidad.capacidad_max_pax }} huéspedes</div>
+                        </td>
+                        <td class="py-4 px-4 text-center">
+                            {% if fila.unidad.estado_unidad == 'DISPONIBLE' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Disponible
+                                </span>
+                            {% elif fila.unidad.estado_unidad == 'OCUPADA' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200/60">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Ocupada
+                                </span>
+                            {% elif fila.unidad.estado_unidad == 'SUCIO' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/60">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pendiente Aseo
+                                </span>
+                            {% elif fila.unidad.estado_unidad == 'EN_LIMPIEZA' %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200/60">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span> En Limpieza
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200/60">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Mantención
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        {% for c in fila.celdas %}
+                            <td class="p-2 border-l border-slate-100 align-middle">
+                                {% if c.reserva %}
+                                    <div class="rounded-xl bg-slate-900 text-white p-2.5 text-xs shadow-2xs">
+                                        <div class="flex items-center justify-between gap-1">
+                                            <span class="font-bold text-[11px] text-emerald-400">#{{ c.reserva.id_reserva }}</span>
+                                            {% if c.reserva.estado_reserva == 'CONFIRMADA' or c.reserva.estado_reserva == 'PENDIENTE' %}
+                                                <a href="{% url 'checkin_view' c.reserva.id_reserva %}" class="text-[10px] font-semibold bg-white/15 hover:bg-white/25 px-1.5 py-0.5 rounded transition">Check-in</a>
+                                            {% elif c.reserva.estado_reserva == 'CHECKIN_ACTIVO' %}
+                                                <a href="{% url 'checkout_view' c.reserva.id_reserva %}" class="text-[10px] font-semibold bg-amber-400/20 text-amber-300 hover:bg-amber-400/30 px-1.5 py-0.5 rounded transition">Check-out</a>
+                                            {% endif %}
+                                        </div>
+                                        <div class="font-medium truncate mt-1" title="{{ c.reserva.id_pasajero_titular.nombre_completo }}">
+                                            {{ c.reserva.id_pasajero_titular.nombre_completo }}
+                                        </div>
+                                    </div>
+                                {% elif fila.unidad.estado_unidad == 'MANTENIMIENTO' %}
+                                    <div class="rounded-xl bg-rose-50/70 border border-rose-100 text-rose-600 py-3 text-center text-xs font-medium">
+                                        Bloqueada
+                                    </div>
+                                {% else %}
+                                    <a href="{% url 'crear_reserva' %}" class="block rounded-xl border border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-slate-400 hover:text-emerald-700 py-3 text-center text-xs font-medium transition">
+                                        Disponible
+                                    </a>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,481 @@
+{% extends 'pms/base.html' %}
+
+{% block title %}Mantenedores Base · Turismo TUCHILE{% endblock %}
+{% block page_title %}Administración y Mantenedores Maestros{% endblock %}
+{% block page_subtitle %}Configuración exclusiva para Superadministrador &middot; Sincronizado con Supabase PostgreSQL{% endblock %}
+
+{% block content %}
+<!-- Pestañas de Navegación de Mantenedores (Estilo A) -->
+<div class="bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs inline-flex flex-wrap gap-1">
+    <a href="?tab=unidades"
+       class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if tab == 'unidades' %}bg-slate-900 text-white shadow-2xs{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+        Unidades de Alojamiento ({{ unidades.count }})
+    </a>
+    <a href="?tab=tarifas"
+       class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if tab == 'tarifas' %}bg-slate-900 text-white shadow-2xs{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+        Tarifas y Temporadas ({{ tarifas.count }})
+    </a>
+    <a href="?tab=inventario"
+       class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if tab == 'inventario' %}bg-slate-900 text-white shadow-2xs{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+        Inventario Crítico ({{ inventario.count }})
+    </a>
+    <a href="?tab=sucursales"
+       class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if tab == 'sucursales' %}bg-slate-900 text-white shadow-2xs{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+        Sucursales y Zonas ({{ sucursales.count }})
+    </a>
+    <a href="?tab=usuarios"
+       class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if tab == 'usuarios' %}bg-slate-900 text-white shadow-2xs{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+        Usuarios y Roles ({{ usuarios.count }})
+    </a>
+</div>
+
+{% if tab == 'unidades' %}
+<!-- TAB 1: UNIDADES DE HOSPEDAJE -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <form method="POST" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_unidad">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">Registrar Nueva Unidad</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Alta de cabañas o habitaciones en una sede</p>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Sucursal / Sede *</label>
+            <select name="id_sucursal" required class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                {% for s in sucursales %}
+                    <option value="{{ s.id_sucursal }}">{{ s.nombre_sucursal }} ({{ s.comuna_ciudad }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Tipología *</label>
+            <select name="id_tipo_unidad" required class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                {% for t in tipos_unidad %}
+                    <option value="{{ t.id_tipo_unidad }}">{{ t.nombre_tipo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Código o Identificador *</label>
+            <input type="text" name="codigo_numero" placeholder="Ej. Cabaña 6 (Arrayán)" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Capacidad Máx (Pax)</label>
+                <input type="number" name="capacidad_max_pax" value="4" min="1" max="12" required
+                       class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">N° de Camas</label>
+                <input type="number" name="cantidad_camas" value="3" min="1" max="10" required
+                       class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+            </div>
+        </div>
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer">
+            Guardar unidad
+        </button>
+    </form>
+
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-900">Catálogo de Unidades de Hospedaje</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        <th class="py-3 px-5">Unidad</th>
+                        <th class="py-3 px-4">Sucursal</th>
+                        <th class="py-3 px-4">Tipología</th>
+                        <th class="py-3 px-4 text-center">Capacidad</th>
+                        <th class="py-3 px-4 text-center">Estado</th>
+                        <th class="py-3 px-5 text-right">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/60 text-xs">
+                    {% for u in unidades %}
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3.5 px-5 font-bold text-slate-900">{{ u.codigo_numero }}</td>
+                            <td class="py-3.5 px-4 text-slate-600">{{ u.id_sucursal.nombre_sucursal }}</td>
+                            <td class="py-3.5 px-4 text-slate-600">{{ u.id_tipo_unidad.nombre_tipo }}</td>
+                            <td class="py-3.5 px-4 text-center text-slate-700">{{ u.capacidad_max_pax }} pax &middot; {{ u.cantidad_camas }} camas</td>
+                            <td class="py-3.5 px-4 text-center">
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">{{ u.get_estado_unidad_display }}</span>
+                            </td>
+                            <td class="py-3.5 px-5 text-right">
+                                <form method="POST" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="eliminar_unidad">
+                                    <input type="hidden" name="id_unidad" value="{{ u.id_unidad }}">
+                                    <button type="submit" class="text-rose-600 hover:text-rose-800 font-medium cursor-pointer">Eliminar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% elif tab == 'tarifas' %}
+<!-- TAB 2: TARIFAS Y TEMPORADAS -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <form method="POST" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_tarifa">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">Nueva Tarifa de Temporada</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Define valores por noche según zona y tipo de unidad</p>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Zona Geográfica *</label>
+            <select name="id_zona" required class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                {% for z in zonas %}
+                    <option value="{{ z.id_zona }}">{{ z.nombre_zona }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Tipología de Unidad *</label>
+            <select name="id_tipo_unidad" required class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                {% for t in tipos_unidad %}
+                    <option value="{{ t.id_tipo_unidad }}">{{ t.nombre_tipo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nombre de Temporada *</label>
+            <input type="text" name="nombre_temporada" placeholder="Ej. Temporada Baja Invierno" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Fecha Inicio *</label>
+                <input type="date" name="fecha_inicio" value="2026-03-01" required
+                       class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Fecha Término *</label>
+                <input type="date" name="fecha_fin" value="2026-11-30" required
+                       class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-900">
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Precio Noche (CLP) *</label>
+                <input type="number" name="precio_noche_clp" value="55000" min="1000" required
+                       class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">% Abono Mínimo</label>
+                <input type="number" name="porcentaje_abono_min" value="50" min="10" max="100" required
+                       class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+            </div>
+        </div>
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer">
+            Registrar tarifa
+        </button>
+    </form>
+
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-900">Matriz de Tarifas Configuradas</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        <th class="py-3 px-5">Temporada</th>
+                        <th class="py-3 px-4">Zona / Tipología</th>
+                        <th class="py-3 px-4">Vigencia</th>
+                        <th class="py-3 px-5 text-right">Precio por Noche (CLP)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/60 text-xs">
+                    {% for t in tarifas %}
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3.5 px-5 font-bold text-slate-900">{{ t.nombre_temporada }}</td>
+                            <td class="py-3.5 px-4 text-slate-600">
+                                <div>{{ t.id_zona.nombre_zona }}</div>
+                                <div class="text-slate-400">{{ t.id_tipo_unidad.nombre_tipo }}</div>
+                            </td>
+                            <td class="py-3.5 px-4 text-slate-500">{{ t.fecha_inicio|date:"d/m/Y" }} &rarr; {{ t.fecha_fin|date:"d/m/Y" }}</td>
+                            <td class="py-3.5 px-5 text-right">
+                                <form method="POST" class="inline-flex items-center justify-end gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="actualizar_precio_tarifa">
+                                    <input type="hidden" name="id_tarifa" value="{{ t.id_tarifa }}">
+                                    <input type="number" name="precio_noche_clp" value="{{ t.precio_noche_clp|floatformat:0 }}"
+                                           class="w-28 rounded-lg border border-slate-200 px-2.5 py-1 text-right font-bold text-slate-900">
+                                    <button type="submit" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold px-2.5 py-1 rounded-lg transition cursor-pointer">
+                                        Actualizar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% elif tab == 'inventario' %}
+<!-- TAB 3: INVENTARIO CRÍTICO -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <form method="POST" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_inventario">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">Agregar Ítem de Inventario</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Equipamiento controlado durante el Check-out</p>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Unidad Asignada *</label>
+            <select name="id_unidad" required class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                {% for u in unidades %}
+                    <option value="{{ u.id_unidad }}">{{ u.codigo_numero }} ({{ u.id_sucursal.nombre_sucursal }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nombre del Ítem *</label>
+            <input type="text" name="nombre_item" placeholder="Ej. Estufa Combustión Lenta / Calefactor" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Categoría</label>
+            <input type="text" name="categoria_item" value="Electrodoméstico / Menaje" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Cantidad Estándar</label>
+                <input type="number" name="cantidad_estandar" value="1" min="1" required
+                       class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Valor Reposición ($)</label>
+                <input type="number" name="valor_reposicion" value="45000" min="0" required
+                       class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+            </div>
+        </div>
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer">
+            Incorporar al inventario
+        </button>
+    </form>
+
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-900">Inventario Crítico por Unidad</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        <th class="py-3 px-5">Unidad</th>
+                        <th class="py-3 px-4">Ítem / Equipamiento</th>
+                        <th class="py-3 px-4">Categoría</th>
+                        <th class="py-3 px-4 text-center">Cant.</th>
+                        <th class="py-3 px-5 text-right">Valor Reposición</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/60 text-xs">
+                    {% for item in inventario %}
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3 px-5 font-semibold text-slate-900">{{ item.id_unidad.codigo_numero }}</td>
+                            <td class="py-3 px-4 text-slate-800">{{ item.nombre_item }}</td>
+                            <td class="py-3 px-4 text-slate-500">{{ item.categoria_item }}</td>
+                            <td class="py-3 px-4 text-center text-slate-700">{{ item.cantidad_estandar }}</td>
+                            <td class="py-3 px-5 text-right font-mono font-semibold text-slate-800">${{ item.valor_reposicion|floatformat:0 }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% elif tab == 'sucursales' %}
+<!-- TAB 4: SUCURSALES Y ZONAS -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <form method="POST" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_sucursal">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">Registrar Nueva Sucursal</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Expansión de complejos turísticos por zona</p>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Zona Geográfica *</label>
+            <select name="id_zona" required class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                {% for z in zonas %}
+                    <option value="{{ z.id_zona }}">{{ z.nombre_zona }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nombre de la Sede *</label>
+            <input type="text" name="nombre_sucursal" placeholder="Ej. Sede Huilo-Huilo" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Comuna / Ciudad *</label>
+            <input type="text" name="comuna_ciudad" placeholder="Panguipulli" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Dirección Comercial *</label>
+            <input type="text" name="direccion" placeholder="Ruta Internacional CH-203 Km 55" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Teléfono Recepción *</label>
+            <input type="text" name="telefono_sede" placeholder="+56 9 8555 6677" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer">
+            Crear sucursal
+        </button>
+    </form>
+
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-900">Sedes y Complejos Turísticos Activos</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        <th class="py-3 px-5">Sucursal</th>
+                        <th class="py-3 px-4">Zona Geográfica</th>
+                        <th class="py-3 px-4">Ubicación y Contacto</th>
+                        <th class="py-3 px-5 text-center">Estado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/60 text-xs">
+                    {% for s in sucursales %}
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3.5 px-5 font-bold text-slate-900">{{ s.nombre_sucursal }}</td>
+                            <td class="py-3.5 px-4 text-slate-600">{{ s.id_zona.nombre_zona }}</td>
+                            <td class="py-3.5 px-4 text-slate-500">
+                                <div>{{ s.direccion }}, {{ s.comuna_ciudad }}</div>
+                                <div class="text-slate-400">{{ s.telefono_sede }}</div>
+                            </td>
+                            <td class="py-3.5 px-5 text-center">
+                                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                    {{ s.estado_sucursal }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% elif tab == 'usuarios' %}
+<!-- TAB 5: USUARIOS Y ROLES -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <form method="POST" class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="crear_usuario">
+        <div>
+            <h3 class="text-sm font-bold text-slate-900">Crear Cuenta de Funcionario</h3>
+            <p class="text-xs text-slate-400 mt-0.5">Control de acceso basado en roles (RBAC)</p>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">RUT Funcionario *</label>
+            <input type="text" name="rut_usuario" placeholder="19.111.222-3" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Nombre Completo *</label>
+            <input type="text" name="nombre_completo" placeholder="Ej. Diego Vargas (Recepción Pucón)" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Correo Institucional *</label>
+            <input type="email" name="correo_electronico" placeholder="recepcion.pucon@tuchile.cl" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Rol de Acceso *</label>
+            <select name="id_rol" required class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                {% for r in roles %}
+                    <option value="{{ r.id_rol }}">{{ r.nombre_rol }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Sucursal Asignada</label>
+            <select name="id_sucursal" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-900">
+                <option value="">Casa Matriz (Todas las Sedes)</option>
+                {% for s in sucursales %}
+                    <option value="{{ s.id_sucursal }}">{{ s.nombre_sucursal }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Contraseña Inicial *</label>
+            <input type="password" name="password" value="tuchile2026" required
+                   class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900">
+        </div>
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2.5 rounded-xl transition cursor-pointer">
+            Registrar funcionario
+        </button>
+    </form>
+
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+        <div class="p-5 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-900">Cuentas de Usuarios Registradas en Supabase</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-200/80 bg-slate-50/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        <th class="py-3 px-5">Funcionario</th>
+                        <th class="py-3 px-4">Rol RBAC</th>
+                        <th class="py-3 px-4">Sede</th>
+                        <th class="py-3 px-4 text-center">Estado</th>
+                        <th class="py-3 px-5 text-right">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/60 text-xs">
+                    {% for u in usuarios %}
+                        <tr class="hover:bg-slate-50/50">
+                            <td class="py-3.5 px-5">
+                                <div class="font-bold text-slate-900">{{ u.nombre_completo }}</div>
+                                <div class="text-slate-400">{{ u.correo_electronico }} &middot; {{ u.rut_usuario }}</div>
+                            </td>
+                            <td class="py-3.5 px-4 font-medium text-slate-700">{{ u.id_rol.nombre_rol }}</td>
+                            <td class="py-3.5 px-4 text-slate-500">{{ u.id_sucursal.nombre_sucursal|default:"Global (Casa Matriz)" }}</td>
+                            <td class="py-3.5 px-4 text-center">
+                                {% if u.activo %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">Activo</span>
+                                {% else %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-5 text-right">
+                                <form method="POST" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="toggle_usuario">
+                                    <input type="hidden" name="id_usuario" value="{{ u.id_usuario }}">
+                                    <button type="submit" class="text-slate-600 hover:text-slate-900 font-medium underline cursor-pointer">
+                                        {% if u.activo %}Desactivar{% else %}Activar{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
