@@ -36,6 +36,18 @@ def requiere_login(view_func):
     return _wrapped_view
 
 
+def solo_recepcion_o_admin(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        if not request.session.get("usuario_id"):
+            return redirect("login")
+        if request.session.get("rol_activo") == "ASEO_MANT":
+            messages.warning(request, "Su perfil de Aseo y Limpieza solo tiene acceso al panel de Unidades y Limpieza.")
+            return redirect("aseo_movil")
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+
 def login_view(request):
     if request.session.get("usuario_id"):
         if request.session.get("rol_activo") == "ASEO_MANT":
@@ -84,7 +96,7 @@ def logout_view(request):
     return redirect("login")
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def dashboard_gantt(request):
     zona_id = request.GET.get("zona", "")
     tipo_id = request.GET.get("tipo", "")
@@ -135,7 +147,7 @@ def dashboard_gantt(request):
     return render(request, "pms/dashboard.html", context)
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def reservas_lista(request):
     estado_filtro = request.GET.get("estado", "")
     q = request.GET.get("q", "").strip()
@@ -162,7 +174,7 @@ def reservas_lista(request):
     return render(request, "pms/reservas_lista.html", context)
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def crear_reserva(request):
     if request.method == "POST":
         rut = request.POST.get("num_documento", "").strip()
@@ -269,7 +281,7 @@ def crear_reserva(request):
     return render(request, "pms/reserva_nueva.html", context)
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def anular_reserva(request, reserva_id):
     reserva = get_object_or_404(Reserva, pk=reserva_id)
     reserva.estado_reserva = "ANULADA"
@@ -278,7 +290,7 @@ def anular_reserva(request, reserva_id):
     return redirect("reservas_lista")
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def checkin_view(request, reserva_id):
     reserva = get_object_or_404(Reserva.objects.select_related("id_pasajero_titular", "id_unidad", "id_unidad__id_sucursal"), pk=reserva_id)
 
@@ -330,7 +342,7 @@ def checkin_view(request, reserva_id):
     return render(request, "pms/checkin.html", {"nav_active": "reservas", "reserva": reserva})
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def checkout_view(request, reserva_id):
     reserva = get_object_or_404(Reserva.objects.select_related("id_pasajero_titular", "id_unidad", "id_unidad__id_sucursal"), pk=reserva_id)
     inventario = InventarioUnidad.objects.filter(id_unidad=reserva.id_unidad)
@@ -428,7 +440,7 @@ def aseo_movil(request):
     return render(request, "pms/aseo.html", {"nav_active": "aseo", "unidades": unidades, "incidencias": incidencias})
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def caja_reportes(request):
     caja = CajaDiaria.objects.filter(estado_caja="ABIERTA").first() or CajaDiaria.objects.last()
     movimientos = PagoMovimiento.objects.select_related("id_reserva", "id_caja").order_by("-fecha_hora_pago")
@@ -454,7 +466,7 @@ def caja_reportes(request):
     return render(request, "pms/caja_reportes.html", {"nav_active": "finanzas", "caja": caja, "movimientos": movimientos})
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def exportar_excel(request):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -492,7 +504,7 @@ def exportar_excel(request):
     return response
 
 
-@requiere_login
+@solo_recepcion_o_admin
 def comprobante_pago(request, reserva_id):
     reserva = get_object_or_404(Reserva.objects.select_related("id_pasajero_titular", "id_unidad", "id_unidad__id_sucursal"), pk=reserva_id)
     pagos = PagoMovimiento.objects.filter(id_reserva=reserva)
