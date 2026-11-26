@@ -49,7 +49,11 @@
                         <td class="py-4 px-5 font-bold text-slate-900">#{{ r.id_reserva }}</td>
                         <td class="py-4 px-4">
                             <div class="font-semibold text-slate-900">{{ r.id_pasajero_titular.nombre_completo }}</div>
-                            <div class="text-xs text-slate-400 mt-0.5">{{ r.id_pasajero_titular.num_documento }} &middot; {{ r.id_pasajero_titular.procedencia_ciudad }}</div>
+                            <div class="text-xs text-slate-400 mt-0.5">
+                                <span title="PII Ofuscado bajo Control ISO/IEC 27001 A.8.11">{{ r.id_pasajero_titular.documento_enmascarado }}</span>
+                                &middot; {{ r.id_pasajero_titular.correo_enmascarado }}
+                                &middot; {{ r.id_pasajero_titular.procedencia_ciudad }}
+                            </div>
                         </td>
                         <td class="py-4 px-4">
                             <div class="font-medium text-slate-800">{{ r.id_unidad.codigo_numero }}</div>

@@ -84,6 +84,18 @@ class Usuario(models.Model):
         verbose_name = "Usuario del Sistema"
         verbose_name_plural = "04. Usuarios del Sistema"
 
+    @property
+    def rut_enmascarado(self):
+        from pms.security.controls import enmascarar_rut_pasaporte
+
+        return enmascarar_rut_pasaporte(self.rut_usuario)
+
+    @property
+    def correo_enmascarado(self):
+        from pms.security.controls import enmascarar_email
+
+        return enmascarar_email(self.correo_electronico)
+
     def __str__(self):
         return f"{self.nombre_completo} ({self.id_rol.nombre_rol})"
 
@@ -206,6 +218,18 @@ class Pasajero(models.Model):
         db_table = "PASAJERO"
         verbose_name = "Pasajero"
         verbose_name_plural = "09. Pasajeros"
+
+    @property
+    def documento_enmascarado(self):
+        from pms.security.controls import enmascarar_rut_pasaporte
+
+        return enmascarar_rut_pasaporte(self.num_documento)
+
+    @property
+    def correo_enmascarado(self):
+        from pms.security.controls import enmascarar_email
+
+        return enmascarar_email(self.correo_electronico or "")
 
     def __str__(self):
         return f"{self.nombre_completo} ({self.num_documento})"
